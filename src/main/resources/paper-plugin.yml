@@ -1,0 +1,26 @@
+name: Pl3xLands
+version: "${version}"
+main: me.animepdf.pl3xLands.Pl3xLandsPlugin
+loader: me.animepdf.pl3xLands.loader.Pl3xLandsLoader
+api-version: "1.21"
+author: Animepdf
+description: Pl3xMap addon for rendering claimed land chunks
+website: https://animepdf.me
+
+dependencies:
+  server:
+    Pl3xMap:
+      load: BEFORE
+      required: true
+      join-classpath: true
+
+commands:
+  lands:
+    description: Main lands command
+    usage: /lands <reload|info|refresh>
+    permission: lands.admin
+
+permissions:
+  lands.admin:
+    description: Allow access to lands admin commands
+    default: op
