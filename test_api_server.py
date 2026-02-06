@@ -9,8 +9,14 @@ import struct
 
 PORT = 8000
 
-def pack_chunk(x, z):
-    return (x & 0xFFFFFFFF) | (z & 0xFFFFFFFF) << 32
+# def pack_chunk(x: int, z: int) -> int:
+#     return (x & 0xffffffff) | ((z & 0xffffffff) << 32)
+
+def pack_chunk(x: int, z: int) -> int:
+    key = (x & 0xffffffff) | ((z & 0xffffffff) << 32)
+    if key >= 1 << 63:
+        key -= 1 << 64
+    return key
 
 def generate_large_dataset(region_count=50, chunks_per_region=100):
     print(f"Generating {region_count} regions with {chunks_per_region} chunks each...")
