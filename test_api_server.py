@@ -1,138 +1,96 @@
-#!/usr/bin/env python3
-
-from http.server import HTTPServer, BaseHTTPRequestHandler
+import http.server
+import socketserver
 import json
-from datetime import datetime
+import hashlib
+import time
+import uuid
+import random
+import struct
 
-SAMPLE_DATA = {
-    "success": True,
-    "data": {
-        "lands": [
-            {
-                "id": "land_001",
-                "name": "Spawn Town",
-                "description": "The main spawn area for all new players",
-                "contact": "admin@example.com",
-                "color": "#8000FF00",
-                "chunks": [
-                    {"x": 0, "z": 0, "world": "world"},
-                    {"x": 1, "z": 0, "world": "world"},
-                    {"x": 0, "z": 1, "world": "world"},
-                    {"x": 1, "z": 1, "world": "world"},
-                    {"x": 2, "z": 0, "world": "world"},
-                    {"x": 2, "z": 1, "world": "world"}
-                ],
-                "created_at": int(datetime(2024, 1, 1).timestamp() * 1000),
-                "updated_at": int(datetime.now().timestamp() * 1000)
-            },
-            {
-                "id": "land_002",
-                "name": "Player Base - Alice",
-                "description": "Alice's awesome castle with automatic farms",
-                "contact": "alice@example.com",
-                "color": "#800000FF",
-                "chunks": [
-                    {"x": 10, "z": 10, "world": "world"},
-                    {"x": 11, "z": 10, "world": "world"},
-                    {"x": 10, "z": 11, "world": "world"},
-                    {"x": 11, "z": 11, "world": "world"}
-                ],
-                "created_at": int(datetime(2024, 1, 15).timestamp() * 1000),
-                "updated_at": int(datetime.now().timestamp() * 1000)
-            },
-            {
-                "id": "land_003",
-                "name": "Shopping District",
-                "description": "Community shopping area - all are welcome!",
-                "contact": "community@example.com",
-                "color": "#80FFA500",
-                "chunks": [
-                    {"x": -5, "z": -5, "world": "world"},
-                    {"x": -4, "z": -5, "world": "world"},
-                    {"x": -3, "z": -5, "world": "world"},
-                    {"x": -5, "z": -4, "world": "world"},
-                    {"x": -4, "z": -4, "world": "world"},
-                    {"x": -3, "z": -4, "world": "world"}
-                ],
-                "created_at": int(datetime(2024, 1, 20).timestamp() * 1000),
-                "updated_at": int(datetime.now().timestamp() * 1000)
-            },
-            {
-                "id": "land_004",
-                "name": "Nether Hub",
-                "description": "Fast travel network hub",
-                "contact": "admin@example.com",
-                "chunks": [
-                    {"x": 0, "z": 0, "world": "world_nether"},
-                    {"x": 1, "z": 0, "world": "world_nether"},
-                    {"x": 0, "z": 1, "world": "world_nether"},
-                    {"x": 1, "z": 1, "world": "world_nether"}
-                ],
-                "created_at": int(datetime(2024, 1, 25).timestamp() * 1000),
-                "updated_at": int(datetime.now().timestamp() * 1000)
-            }
-        ],
-        "last_updated": int(datetime.now().timestamp() * 1000)
-    },
-    "timestamp": int(datetime.now().timestamp() * 1000)
-}
+PORT = 8000
 
-class LandsAPIHandler(BaseHTTPRequestHandler):
+def pack_chunk(x, z):
+    return (x & 0xFFFFFFFF) | (z & 0xFFFFFFFF) << 32
+
+def generate_large_dataset(region_count=50, chunks_per_region=100):
+    print(f"Generating {region_count} regions with {chunks_per_region} chunks each...")
+    
+    regions = []
+    for i in range(region_count):
+        center_x = random.randint(-10000, 10000)
+        center_z = random.randint(-10000, 10000)
+        chunks = []
+        for _ in range(chunks_per_region):
+            cx = center_x + random.randint(-5, 5)
+            cz = center_z + random.randint(-5, 5)
+            chunks.append(pack_chunk(cx, cz))
+
+        region = {
+            "id": str(uuid.uuid4()),
+            "name": f"Region_{i}",
+            "description": f"This is a generated description for region {i} to test string serialization overhead.",
+            "ownerId": str(uuid.uuid4()),
+            "contact": f"user_{i}@example.com",
+            "world": f"world",
+            "chunks": chunks
+        }
+        regions.append(region)
+
+    regions_json = regions
+    
+    content_str = json.dumps(regions)
+    data_hash = hashlib.sha256(content_str.encode('utf-8')).hexdigest()
+
+    manifest = {
+        "hash": data_hash,
+        "timestamp": int(time.time() * 1000),
+        "regions": regions
+    }
+    
+    return manifest
+
+CURRENT_DATA = generate_large_dataset()
+print(f"Data ready. Hash: {CURRENT_DATA['hash']}")
+
+class MockApiHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
-        if self.path == '/lands' or self.path == '/lands/claims':
-            SAMPLE_DATA['timestamp'] = int(datetime.now().timestamp() * 1000)
-            SAMPLE_DATA['data']['last_updated'] = int(datetime.now().timestamp() * 1000)
-            for land in SAMPLE_DATA['data']['lands']:
-                land['updated_at'] = int(datetime.now().timestamp() * 1000)
-            
+        # 1. Endpoint: /status
+        # Returns just the hash so the client can decide if it needs to update
+        if self.path == '/status':
             self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Content-type', 'application/json')
             self.end_headers()
             
-            response = json.dumps(SAMPLE_DATA, indent=2)
-            self.wfile.write(response.encode())
+            response = {
+                "hash": CURRENT_DATA['hash'],
+                "timestamp": CURRENT_DATA['timestamp']
+            }
+            self.wfile.write(json.dumps(response).encode('utf-8'))
+            print(f"[200] /status requested. Returned hash: {CURRENT_DATA['hash'][:8]}...")
+
+        # 2. Endpoint: /regions
+        # Returns the full heavy payload
+        elif self.path == '/regions':
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
             
-            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Served land data: {len(SAMPLE_DATA['data']['lands'])} lands")
+            # Send the massive JSON object
+            self.wfile.write(json.dumps(CURRENT_DATA).encode('utf-8'))
+            print(f"[200] /regions requested. Sent {len(CURRENT_DATA['regions'])} regions.")
+
         else:
             self.send_response(404)
             self.end_headers()
-            self.wfile.write(b'Not Found')
-    
-    def do_OPTIONS(self):
-        self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-        self.end_headers()
-    
-    def log_message(self, format, *args):
-        pass
 
-
-def run_server(port=8000):
-    server_address = ('', port)
-    httpd = HTTPServer(server_address, LandsAPIHandler)
-    
-    print("=" * 60)
-    print("Pl3xLands - Test API Server")
-    print("=" * 60)
-    print(f"Server running on http://localhost:{port}")
-    print(f"API endpoint: http://localhost:{port}/lands")
-    print()
-    print("Set this in your config.yml:")
-    print(f"  api:")
-    print(f"    url: \"http://localhost:{port}/lands\"")
-    print()
-    print("Press Ctrl+C to stop the server")
-    print("=" * 60)
-    
-    try:
-        httpd.serve_forever()
-    except KeyboardInterrupt:
-        print("\nShutting down server...")
-        httpd.shutdown()
-
-
-if __name__ == '__main__':
-    run_server()
+if __name__ == "__main__":
+    with socketserver.TCPServer(("", PORT), MockApiHandler) as httpd:
+        print(f"\nServer started at http://localhost:{PORT}")
+        print("Endpoints:")
+        print(f"  GET http://localhost:{PORT}/status")
+        print(f"  GET http://localhost:{PORT}/regions")
+        print("\nPress Ctrl+C to stop.")
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            pass
