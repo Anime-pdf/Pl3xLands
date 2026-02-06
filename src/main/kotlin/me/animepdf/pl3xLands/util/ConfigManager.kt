@@ -20,7 +20,7 @@ object ConfigManager {
         val loader = YamlConfigurationLoader.builder()
             .path(file)
             .nodeStyle(NodeStyle.BLOCK)
-            .indent(4)
+            .indent(2)
             .build()
 
         val node = loader.load()
