@@ -46,7 +46,7 @@ class Pl3xMapHook : EventListener {
         markers.clear()
 
         for (region in regions) {
-            val chunkPolygons = region.chunks.map { packedChunk ->
+            val chunkPolygons = region.chunks.distinct().map { packedChunk ->
                 chunkToPolygon(packedChunk)
             }
 
