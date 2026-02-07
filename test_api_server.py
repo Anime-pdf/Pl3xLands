@@ -12,24 +12,82 @@ PORT = 8000
 # def pack_chunk(x: int, z: int) -> int:
 #     return (x & 0xffffffff) | ((z & 0xffffffff) << 32)
 
+CHUNK_SIZE = 16
+
+def neighbors(cx, cz):
+    return [
+        (cx + CHUNK_SIZE, cz),
+        (cx - CHUNK_SIZE, cz),
+        (cx, cz + CHUNK_SIZE),
+        (cx, cz - CHUNK_SIZE),
+    ]
+
 def pack_chunk(x: int, z: int) -> int:
     key = (x << 32) | (z & 0xffffffff)
     if key >= 1 << 63:
         key -= 1 << 64
     return key
 
-def generate_large_dataset(region_count=5, chunks_per_region=10):
-    print(f"Generating {region_count} regions with {chunks_per_region} chunks each...")
-    
+def generate_region_chunks(
+        start_x,
+        start_z,
+        chunk_count,
+        max_radius_chunks=12
+):
+    visited = set()
+    frontier = []
+
+    start = (start_x, start_z)
+    visited.add(start)
+    frontier.append(start)
+
+    while len(visited) < chunk_count and frontier:
+        cx, cz = random.choice(frontier)
+
+        for nx, nz in neighbors(cx, cz):
+            if len(visited) >= chunk_count:
+                break
+
+            if abs(nx - start_x) > max_radius_chunks * CHUNK_SIZE:
+                continue
+            if abs(nz - start_z) > max_radius_chunks * CHUNK_SIZE:
+                continue
+
+            if (nx, nz) not in visited and random.random() < 0.6:
+                visited.add((nx, nz))
+                frontier.append((nx, nz))
+
+        if random.random() < 0.3:
+            frontier.remove((cx, cz))
+
+    return list(visited)
+
+def carve_holes(chunks, hole_chance=0.15):
+    result = []
+
+    for cx, cz in chunks:
+        if random.random() < hole_chance:
+            continue
+        result.append((cx, cz))
+
+    return result
+
+def generate_large_dataset(region_count=20, chunks_per_region=100):
     regions = []
+
     for i in range(region_count):
-        center_x = random.randrange(0, 8000, 16)-4000
-        center_z = random.randrange(0, 8000, 16)-4000
-        chunks = []
-        for _ in range(chunks_per_region):
-            cx = center_x + random.randint(-5, 5)*16
-            cz = center_z + random.randint(-5, 5)*16
-            chunks.append(pack_chunk(cx, cz))
+        center_x = random.randrange(-4000, 4000, CHUNK_SIZE)
+        center_z = random.randrange(-4000, 4000, CHUNK_SIZE)
+
+        chunks_xy = generate_region_chunks(
+            center_x,
+            center_z,
+            chunks_per_region
+        )
+
+        chunks_xy = carve_holes(chunks_xy, hole_chance=0.05)
+
+        chunks = [pack_chunk(x, z) for x, z in chunks_xy]
 
         region = {
             "id": str(uuid.uuid4()),
@@ -37,14 +95,12 @@ def generate_large_dataset(region_count=5, chunks_per_region=10):
             "description": f"This is a generated description for region {i} to test string serialization overhead.",
             "owner": str(uuid.uuid4()),
             "contact": f"user_{i}@example.com",
-            "world": f"world",
+            "world": random.choice(["world", "world_nether"]),
             "chunks": chunks
         }
         regions.append(region)
 
-    regions_json = regions
-    
-    content_str = json.dumps(regions)
+    content_str = json.dumps(regions, sort_keys=True)
     data_hash = hashlib.sha256(content_str.encode('utf-8')).hexdigest()
 
     manifest = {
