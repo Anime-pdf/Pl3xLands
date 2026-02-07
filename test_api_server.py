@@ -13,29 +13,29 @@ PORT = 8000
 #     return (x & 0xffffffff) | ((z & 0xffffffff) << 32)
 
 def pack_chunk(x: int, z: int) -> int:
-    key = (x & 0xffffffff) | ((z & 0xffffffff) << 32)
+    key = (x << 32) | (z & 0xffffffff)
     if key >= 1 << 63:
         key -= 1 << 64
     return key
 
-def generate_large_dataset(region_count=50, chunks_per_region=100):
+def generate_large_dataset(region_count=5, chunks_per_region=10):
     print(f"Generating {region_count} regions with {chunks_per_region} chunks each...")
     
     regions = []
     for i in range(region_count):
-        center_x = random.randint(-10000, 10000)
-        center_z = random.randint(-10000, 10000)
+        center_x = random.randrange(0, 8000, 16)-4000
+        center_z = random.randrange(0, 8000, 16)-4000
         chunks = []
         for _ in range(chunks_per_region):
-            cx = center_x + random.randint(-5, 5)
-            cz = center_z + random.randint(-5, 5)
+            cx = center_x + random.randint(-5, 5)*16
+            cz = center_z + random.randint(-5, 5)*16
             chunks.append(pack_chunk(cx, cz))
 
         region = {
             "id": str(uuid.uuid4()),
             "name": f"Region_{i}",
             "description": f"This is a generated description for region {i} to test string serialization overhead.",
-            "ownerId": str(uuid.uuid4()),
+            "owner": str(uuid.uuid4()),
             "contact": f"user_{i}@example.com",
             "world": f"world",
             "chunks": chunks
