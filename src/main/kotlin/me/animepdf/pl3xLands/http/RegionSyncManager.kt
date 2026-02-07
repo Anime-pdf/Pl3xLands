@@ -4,6 +4,7 @@ import com.google.gson.GsonBuilder
 import me.animepdf.pl3xLands.config.ApiAuthType
 import me.animepdf.pl3xLands.config.ApiConfig
 import me.animepdf.pl3xLands.dto.RegionManifest
+import me.animepdf.pl3xLands.hook.Pl3xMapHook
 import me.animepdf.pl3xLands.storage.RegionStorage
 import java.net.URI
 import java.net.http.HttpClient
@@ -16,7 +17,8 @@ import kotlin.io.encoding.Base64
 
 class RegionSyncManager(
     private val apiConfig: ApiConfig,
-    private val storage: RegionStorage
+    private val storage: RegionStorage,
+    private val pl3xMapHook: Pl3xMapHook
 ) {
     private val client = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(apiConfig.timeoutInterval))
@@ -96,6 +98,8 @@ class RegionSyncManager(
             val newManifest = gson.fromJson(dataResponse.body(), RegionManifest::class.java)
             storage.save(newManifest)
             println("Regions updated successfully. Loaded ${newManifest.regions.size} regions.")
+
+            pl3xMapHook.updateMap(newManifest.regions)
         } else {
             println("Failed to download data: HTTP ${dataResponse.statusCode()}")
         }
