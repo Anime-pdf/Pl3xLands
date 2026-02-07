@@ -2,6 +2,7 @@ package me.animepdf.pl3xLands.hook
 
 import me.animepdf.pl3xLands.dto.Region
 import me.animepdf.pl3xLands.util.ChunkPacker
+import me.animepdf.pl3xLands.util.ColorGenerator
 import net.pl3x.map.core.Pl3xMap
 import net.pl3x.map.core.event.EventHandler
 import net.pl3x.map.core.event.EventListener
@@ -34,14 +35,6 @@ class Pl3xMapHook : EventListener {
         world.layerRegistry.unregister(Pl3xMapLayer.KEY)
     }
 
-    fun colorForPlayer(nickname: String): Int {
-        val colorInt = nickname.hashCode().absoluteValue
-        val r = (colorInt shr 16) and 0xFF
-        val g = (colorInt shr 8) and 0xFF
-        val b = colorInt and 0xFF
-        return Colors.argb(150, r, g, b)
-    }
-
     fun updateMap(regions: Array<Region>) {
         markers.clear()
 
@@ -64,7 +57,8 @@ class Pl3xMapHook : EventListener {
             """.trimIndent()
 
             val options = Options.builder()
-                .fillColor(colorForPlayer(region.owner))
+                .strokeColor(ColorGenerator.colorForPlayer(region.owner, 255))
+                .fillColor(ColorGenerator.colorForPlayer(region.owner))
                 .tooltip(Tooltip(region.name))
                 .tooltipSticky(true)
                 .popupContent(popupContent)
