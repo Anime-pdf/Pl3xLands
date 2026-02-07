@@ -15,9 +15,10 @@ import net.pl3x.map.core.markers.marker.Polygon
 import net.pl3x.map.core.markers.marker.Polyline
 import net.pl3x.map.core.markers.option.Options
 import net.pl3x.map.core.markers.option.Tooltip
-import net.pl3x.map.core.util.Colors
 import net.pl3x.map.core.world.World
-import kotlin.math.absoluteValue
+import java.awt.Rectangle
+import java.awt.geom.Area
+import java.awt.geom.PathIterator
 
 class Pl3xMapHook : EventListener {
 
@@ -39,12 +40,7 @@ class Pl3xMapHook : EventListener {
         markers.clear()
 
         for (region in regions) {
-            val chunkPolygons = region.chunks.distinct().map { packedChunk ->
-                chunkToPolygon(packedChunk)
-            }
-
-            val regionKey = "lands_region_${region.id}"
-            val marker = MultiPolygon.of(regionKey, chunkPolygons)
+            val marker = chunksToMultiPolygon(region.id, region.chunks.distinct())
 
             val popupContent = """
                 <div style="text-align:center;">
@@ -72,23 +68,76 @@ class Pl3xMapHook : EventListener {
         markers.forEach { (world, markers) ->  println("Added ${markers.size} markers for $world") }
     }
 
-    private fun chunkToPolygon(packed: Long): Polygon {
+    private fun chunksToMultiPolygon(
+        regionId: String,
+        chunks: Collection<Long>
+    ): MultiPolygon {
+
+        val area = chunksToArea(chunks)
+        val polygons = areaToPolygons(area, "lands_region_$regionId")
+
+        return MultiPolygon.of(
+            "lands_region_$regionId",
+            polygons
+        )
+    }
+
+    private fun areaToPolygons(area: Area, baseId: String): List<Polygon> {
+        val it = area.getPathIterator(null)
+        val coords = DoubleArray(6)
+
+        val rings = mutableListOf<List<Point>>()
+        var currentRing = mutableListOf<Point>()
+
+        while (!it.isDone) {
+            when (it.currentSegment(coords)) {
+                PathIterator.SEG_MOVETO -> {
+                    if (currentRing.isNotEmpty()) {
+                        rings.add(currentRing)
+                        currentRing = mutableListOf()
+                    }
+                    currentRing.add(Point.of(coords[0], coords[1]))
+                }
+
+                PathIterator.SEG_LINETO -> {
+                    currentRing.add(Point.of(coords[0], coords[1]))
+                }
+
+                PathIterator.SEG_CLOSE -> {
+                    if (currentRing.isNotEmpty()) {
+                        currentRing.add(currentRing.first())
+                        rings.add(currentRing)
+                        currentRing = mutableListOf()
+                    }
+                }
+            }
+            it.next()
+        }
+
+        return rings.mapIndexed { index, points ->
+            Polygon.of(
+                "${baseId}_$index",
+                Polyline.of(
+                    "${baseId}_ring_$index",
+                    *points.toTypedArray()
+                )
+            )
+        }
+    }
+
+    private fun chunksToArea(chunks: Collection<Long>): Area {
+        val area = Area()
+        for (packed in chunks) {
+            area.add(chunkToArea(packed))
+        }
+        return area
+    }
+
+    private fun chunkToArea(packed: Long): Area {
         val minX = ChunkPacker.getX(packed)
         val minZ = ChunkPacker.getZ(packed)
-        val maxX = minX + 16
-        val maxZ = minZ + 16
 
-        return Polygon.of(
-            "lands_polygon_$packed",
-            Polyline.of(
-                "lands_polyline_$packed",
-                Point.of(minX, minZ),
-                Point.of(maxX, minZ),
-                Point.of(maxX, maxZ),
-                Point.of(minX, maxZ),
-                Point.of(minX, minZ)
-            )
-        )
+        return Area(Rectangle(minX, minZ, 16, 16))
     }
 
     @EventHandler
