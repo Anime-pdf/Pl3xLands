@@ -5,7 +5,8 @@ import org.spongepowered.configurate.objectmapping.ConfigSerializable
 @ConfigSerializable
 data class GeneralConfig(
     val api: ApiConfig = ApiConfig(),
-    val storage: StorageConfig = StorageConfig()
+    val storage: StorageConfig = StorageConfig(),
+    val editor: EditorConfig = EditorConfig()
 )
 
 /// API
@@ -51,4 +52,13 @@ enum class StorageType {
 data class StorageConfig(
     val type: StorageType = StorageType.SQLITE,
     val filename: String = "lands.db"
+)
+
+/// EDITOR
+@ConfigSerializable
+data class EditorConfig(
+    val enable: Boolean = true,
+    val port: Int = 8181,
+    val mapUrl: String = "http://localhost:8080",
+    val timeoutInterval: Long = 30
 )
