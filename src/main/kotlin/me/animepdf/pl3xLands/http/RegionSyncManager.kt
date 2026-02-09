@@ -49,7 +49,7 @@ class RegionSyncManager(
         val localHash = localManifest?.hash ?: ""
 
         var authHeader = "Authorization"
-        var authValue = ""
+        var authValue: String
 
         val auth = apiConfig.auth
 
@@ -64,7 +64,8 @@ class RegionSyncManager(
             }
 
             ApiAuthType.KEY -> {
-                authHeader = auth.key.header; authValue = auth.key.value
+                authHeader = auth.key.header
+                authValue = auth.key.value
             }
         }
 
