@@ -100,7 +100,7 @@ class RegionSyncManager(
             storage.save(newManifest)
             println("Regions updated successfully. Loaded ${newManifest.regions.size} regions.")
 
-            pl3xMapHook.updateMap(newManifest.regions)
+            pl3xMapHook.updateMap()
         } else {
             println("Failed to download data: HTTP ${dataResponse.statusCode()}")
         }

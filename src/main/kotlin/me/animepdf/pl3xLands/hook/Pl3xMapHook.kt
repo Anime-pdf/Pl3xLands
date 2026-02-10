@@ -1,6 +1,6 @@
 package me.animepdf.pl3xLands.hook
 
-import me.animepdf.pl3xLands.dto.Region
+import me.animepdf.pl3xLands.storage.RegionStorage
 import me.animepdf.pl3xLands.util.ChunkPacker
 import me.animepdf.pl3xLands.util.ColorGenerator
 import net.pl3x.map.core.Pl3xMap
@@ -20,7 +20,9 @@ import java.awt.Rectangle
 import java.awt.geom.Area
 import java.awt.geom.PathIterator
 
-class Pl3xMapHook : EventListener {
+class Pl3xMapHook(
+    val storage: RegionStorage
+) : EventListener {
 
     val markers = HashMap<String, ArrayList<Marker<MultiPolygon>>>()
 
@@ -36,10 +38,11 @@ class Pl3xMapHook : EventListener {
         world.layerRegistry.unregister(Pl3xMapLayer.KEY)
     }
 
-    fun updateMap(regions: Array<Region>) {
+    fun updateMap() {
         markers.clear()
 
-        for (region in regions) {
+        val regionsManifest = storage.load() ?: return
+        for (region in regionsManifest.regions) {
             val marker = chunksToMultiPolygon(region.id, region.chunks.distinct())
 
             val popupContent = """

@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import me.animepdf.pl3xLands.config.GeneralConfig
 import me.animepdf.pl3xLands.config.StorageType
+import me.animepdf.pl3xLands.events.UpdateMapEvent
 import me.animepdf.pl3xLands.hook.Pl3xMapHook
 import me.animepdf.pl3xLands.http.RegionSyncManager
 import me.animepdf.pl3xLands.http.WebServer
@@ -23,19 +24,20 @@ class Pl3xLandsPlugin : JavaPlugin() {
     private lateinit var webEditor: WebServer
     private lateinit var syncManager: RegionSyncManager
     private lateinit var pl3xMapHook: Pl3xMapHook
+    private lateinit var storage: RegionStorage
 
     override fun onEnable() {
         loadConfig()
 
-        val storage: RegionStorage = when (config.storage.type) {
+        storage = when (config.storage.type) {
             StorageType.JSON -> JsonFileStorage(File(dataFolder, config.storage.filename), gson)
             StorageType.SQLITE -> SQLiteStorage(File(dataFolder, config.storage.filename).absolutePath, gson)
         }
 
-        pl3xMapHook = Pl3xMapHook()
+        pl3xMapHook = Pl3xMapHook(storage)
         val manifest = storage.load()
         if (manifest != null) {
-            pl3xMapHook.updateMap(manifest.regions)
+            pl3xMapHook.updateMap()
         }
 
         Pl3xMap.api().worldRegistry.forEach(pl3xMapHook::register);
@@ -76,6 +78,8 @@ class Pl3xLandsPlugin : JavaPlugin() {
         }
 
         Pl3xMap.api().worldRegistry.forEach(pl3xMapHook::unregister);
+
+        storage.save()
 
         logger.info("Pl3xLands disabled")
     }
