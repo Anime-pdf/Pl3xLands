@@ -4,7 +4,6 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import me.animepdf.pl3xLands.config.GeneralConfig
 import me.animepdf.pl3xLands.config.StorageType
-import me.animepdf.pl3xLands.events.UpdateMapEvent
 import me.animepdf.pl3xLands.hook.Pl3xMapHook
 import me.animepdf.pl3xLands.http.RegionSyncManager
 import me.animepdf.pl3xLands.http.WebServer
