@@ -1,20 +1,32 @@
 package me.animepdf.pl3xLands.validation
 
+import me.animepdf.pl3xLands.config.ValidationConfig
 import me.animepdf.pl3xLands.dto.Region
 import org.bukkit.Bukkit
 
 object RegionValidator {
 
-    private const val MAX_NAME_LENGTH = 64
-    private const val MAX_DESCRIPTION_LENGTH = 512
-    private const val MAX_CONTACT_LENGTH = 128
-    private const val MAX_OWNER_LENGTH = 64
-    private const val MAX_CHUNKS_PER_REGION = 10000
-    private const val MIN_CHUNKS_PER_REGION = 1
+    private var MAX_NAME_LENGTH = 64
+    private var MAX_DESCRIPTION_LENGTH = 512
+    private var MAX_CONTACT_LENGTH = 128
+    private var MAX_OWNER_LENGTH = 64
+    private var MAX_CHUNKS_PER_REGION = 10000
+    private var MIN_CHUNKS_PER_REGION = 1
+    private var ALLOWED_WORLDS = emptySet<String>()
+
+    fun setConstraints(validationConfig: ValidationConfig) {
+        MAX_NAME_LENGTH = validationConfig.maxRegionNameLength
+        MAX_DESCRIPTION_LENGTH = validationConfig.maxDescriptionLength
+        MAX_CONTACT_LENGTH = validationConfig.maxContactLength
+        MAX_OWNER_LENGTH = validationConfig.maxOwnerLength
+        MAX_CHUNKS_PER_REGION = validationConfig.maxChunksPerRegion
+        MIN_CHUNKS_PER_REGION = validationConfig.minChunksPerRegion
+        ALLOWED_WORLDS = validationConfig.allowedWorlds.toSet()
+    }
 
     private val ID_REGEX = Regex("^[a-zA-Z0-9_-]{1,64}$")
 
-    fun validate(region: Region, allowedWorlds: Set<String> = emptySet()): ValidationResult {
+    fun validate(region: Region): ValidationResult {
         val errors = mutableListOf<String>()
 
         validateId(region.id, errors)
@@ -22,7 +34,7 @@ object RegionValidator {
         validateDescription(region.description, errors)
         validateOwner(region.owner, errors)
         validateContact(region.contact, errors)
-        validateWorld(region.world, allowedWorlds, errors)
+        validateWorld(region.world, errors)
         validateChunks(region.chunks, errors)
 
         return if (errors.isEmpty()) {
@@ -73,14 +85,14 @@ object RegionValidator {
         }
     }
 
-    private fun validateWorld(world: String, allowedWorlds: Set<String>, errors: MutableList<String>) {
+    private fun validateWorld(world: String, errors: MutableList<String>) {
         if (world.isBlank()) {
             errors.add("World name cannot be blank")
             return
         }
 
-        if (allowedWorlds.isNotEmpty() && world !in allowedWorlds) {
-            errors.add("World '$world' is not in the allowed worlds list: ${allowedWorlds.joinToString()}")
+        if (ALLOWED_WORLDS.isNotEmpty() && world !in ALLOWED_WORLDS) {
+            errors.add("World '$world' is not in the allowed worlds list: ${ALLOWED_WORLDS.joinToString()}")
             return
         }
 

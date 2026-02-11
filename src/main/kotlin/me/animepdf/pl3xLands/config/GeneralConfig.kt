@@ -115,7 +115,6 @@ data class ValidationConfig(
     val maxChunksPerRegion: Int = 10000,
     val minChunksPerRegion: Int = 1,
     val allowedWorlds: List<String> = emptyList(),
-    val allowOverlapping: Boolean = false
 )
 
 // ==================== RENDERING ====================

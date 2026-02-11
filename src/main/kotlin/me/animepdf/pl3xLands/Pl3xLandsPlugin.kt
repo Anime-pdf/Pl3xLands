@@ -10,6 +10,7 @@ import me.animepdf.pl3xLands.http.WebServer
 import me.animepdf.pl3xLands.storage.JsonFileStorage
 import me.animepdf.pl3xLands.storage.RegionStorage
 import me.animepdf.pl3xLands.util.ConfigManager
+import me.animepdf.pl3xLands.validation.RegionValidator
 import net.pl3x.map.core.Pl3xMap
 import org.bukkit.plugin.java.JavaPlugin
 import java.io.File
@@ -58,6 +59,7 @@ class Pl3xLandsPlugin : JavaPlugin() {
     private fun loadConfig() {
         try {
             config = ConfigManager.load(dataFolder.toPath(), "config.yaml")
+            RegionValidator.setConstraints(config.validation)
             logger.info("Config loaded successfully")
         } catch (e: Exception) {
             logger.severe("Failed to load configuration")
