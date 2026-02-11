@@ -9,7 +9,6 @@ import me.animepdf.pl3xLands.http.RegionSyncManager
 import me.animepdf.pl3xLands.http.WebServer
 import me.animepdf.pl3xLands.storage.JsonFileStorage
 import me.animepdf.pl3xLands.storage.RegionStorage
-import me.animepdf.pl3xLands.storage.SQLiteStorage
 import me.animepdf.pl3xLands.util.ConfigManager
 import net.pl3x.map.core.Pl3xMap
 import org.bukkit.plugin.java.JavaPlugin
@@ -17,81 +16,204 @@ import java.io.File
 
 class Pl3xLandsPlugin : JavaPlugin() {
     lateinit var config: GeneralConfig
+        private set
 
     private var gson: Gson = GsonBuilder().disableHtmlEscaping().create()
 
-    private lateinit var webEditor: WebServer
-    private lateinit var syncManager: RegionSyncManager
-    private lateinit var pl3xMapHook: Pl3xMapHook
-    private lateinit var storage: RegionStorage
+    private var webEditor: WebServer? = null
+    private var syncManager: RegionSyncManager? = null
+    private var pl3xMapHook: Pl3xMapHook? = null
+    private var storage: RegionStorage? = null
 
     override fun onEnable() {
-        loadConfig()
+        try {
+            loadConfig()
+            initializeStorage()
+            initializePl3xMap()
+            initializeApiSync()
+            initializeWebEditor()
 
-        storage = when (config.storage.type) {
-            StorageType.JSON -> JsonFileStorage(File(dataFolder, config.storage.filename), gson)
-            StorageType.SQLITE -> SQLiteStorage(File(dataFolder, config.storage.filename).absolutePath, gson)
+            logger.info("Pl3xLands enabled successfully")
+        } catch (e: Exception) {
+            logger.severe("Failed to enable plugin: ${e.message}")
+            e.printStackTrace()
+            server.pluginManager.disablePlugin(this)
         }
-
-        pl3xMapHook = Pl3xMapHook(storage)
-        val manifest = storage.load()
-        if (manifest != null) {
-            pl3xMapHook.updateMap()
-        }
-
-        Pl3xMap.api().worldRegistry.forEach(pl3xMapHook::register);
-
-        if (config.api.enable) {
-            syncManager = RegionSyncManager(config.api, storage, pl3xMapHook)
-            syncManager.start()
-            logger.info("API Sync Manager enabled")
-        }
-
-        if (config.editor.enable) {
-            val webDir = File(dataFolder, "web")
-            if (!webDir.exists()) {
-                webDir.mkdir()
-                saveResource("web/index.html", false)
-                saveResource("web/style.css", false)
-                saveResource("web/script.js", false)
-                logger.info("Web Editor files unpacked")
-            }
-
-            webEditor = WebServer(this, config.editor.port, pl3xMapHook, storage)
-            webEditor.start()
-            logger.info("Web Editor enabled")
-        }
-
-        logger.info("Pl3xLands enabled")
     }
 
     override fun onDisable() {
-        if (config.api.enable) {
-            syncManager.shutdown()
-            logger.info("API Sync Manager disabled")
+        try {
+            shutdownWebEditor()
+            shutdownApiSync()
+            shutdownPl3xMap()
+            saveStorage()
+
+            logger.info("Pl3xLands disabled successfully")
+        } catch (e: Exception) {
+            logger.severe("Error during plugin disable: ${e.message}")
+            e.printStackTrace()
         }
-
-        if (config.editor.enable) {
-            webEditor.stop()
-            logger.info("Web Editor disabled")
-        }
-
-        Pl3xMap.api().worldRegistry.forEach(pl3xMapHook::unregister);
-
-        storage.save()
-
-        logger.info("Pl3xLands disabled")
     }
 
     private fun loadConfig() {
         try {
-            config = ConfigManager.load<GeneralConfig>(dataFolder.toPath(), "config.yaml")
+            config = ConfigManager.load(dataFolder.toPath(), "config.yaml")
             logger.info("Config loaded successfully")
         } catch (e: Exception) {
-            logger.severe("Failed to load config. Disabling plugin")
-            e.printStackTrace()
-            server.pluginManager.disablePlugin(this)
+            logger.severe("Failed to load configuration")
+            throw e
+        }
+    }
+
+    private fun initializeStorage() {
+        try {
+            storage = when (config.storage.type) {
+                StorageType.JSON -> {
+                    logger.info("Using JSON file storage")
+                    JsonFileStorage(
+                        file = File(dataFolder, config.storage.filename),
+                        gson = gson,
+                        logger = logger,
+                        enableValidation = config.validation.enabled
+                    )
+                }
+            }
+
+            if (config.storage.autoSave) {
+                server.scheduler.runTaskTimerAsynchronously(
+                    this,
+                    Runnable {
+                        try {
+                            storage?.save()
+                        } catch (e: Exception) {
+                            logger.warning("Auto-save failed: ${e.message}")
+                        }
+                    },
+                    config.storage.autoSaveInterval * 20L,
+                    config.storage.autoSaveInterval * 20L
+                )
+                logger.info("Auto-save enabled (interval: ${config.storage.autoSaveInterval}s)")
+            }
+        } catch (e: Exception) {
+            logger.severe("Failed to initialize storage")
+            throw e
+        }
+    }
+
+    private fun initializePl3xMap() {
+        try {
+            val storageInstance = storage ?: throw IllegalStateException("Storage not initialized")
+
+            pl3xMapHook = Pl3xMapHook(storageInstance, logger, config.rendering)
+
+            val manifest = storageInstance.load()
+            if (manifest != null) {
+                pl3xMapHook?.updateMap()
+                logger.info("Loaded ${manifest.regions.size} regions from storage")
+            } else {
+                logger.info("No existing regions found")
+            }
+
+            Pl3xMap.api().worldRegistry.forEach { world ->
+                pl3xMapHook?.register(world)
+            }
+
+            logger.info("Pl3xMap integration initialized")
+        } catch (e: Exception) {
+            logger.severe("Failed to initialize Pl3xMap integration")
+            throw e
+        }
+    }
+
+    private fun initializeApiSync() {
+        if (!config.api.enable) {
+            logger.info("API sync disabled in configuration")
             return
+        }
+
+        try {
+            val storageInstance = storage ?: throw IllegalStateException("Storage not initialized")
+            val hookInstance = pl3xMapHook ?: throw IllegalStateException("Pl3xMap hook not initialized")
+
+            syncManager = RegionSyncManager(config.api, storageInstance, hookInstance, logger)
+            syncManager?.start()
+
+            logger.info("API sync manager enabled (polling every ${config.api.refreshInterval}s)")
+        } catch (e: Exception) {
+            logger.severe("Failed to initialize API sync manager")
+            throw e
+        }
+    }
+
+    private fun initializeWebEditor() {
+        if (!config.editor.enable) {
+            logger.info("Web editor disabled in configuration")
+            return
+        }
+
+        try {
+            val webDir = File(dataFolder, "web")
+            if (!webDir.exists()) {
+                webDir.mkdirs()
+                saveResource("web/index.html", false)
+                saveResource("web/style.css", false)
+                saveResource("web/script.js", false)
+                logger.info("Web editor files extracted")
+            }
+
+            val storageInstance = storage ?: throw IllegalStateException("Storage not initialized")
+            val hookInstance = pl3xMapHook ?: throw IllegalStateException("Pl3xMap hook not initialized")
+
+            webEditor = WebServer(this, config.editor.port, hookInstance, storageInstance)
+            webEditor?.start()
+
+            logger.info("Web editor enabled on port ${config.editor.port}")
+        } catch (e: Exception) {
+            logger.severe("Failed to initialize web editor")
+            throw e
+        }
+    }
+
+    private fun shutdownWebEditor() {
+        if (config.editor.enable && webEditor != null) {
+            try {
+                webEditor?.stop()
+                logger.info("Web editor shut down")
+            } catch (e: Exception) {
+                logger.warning("Error shutting down web editor: ${e.message}")
+            }
+        }
+    }
+
+    private fun shutdownApiSync() {
+        if (config.api.enable && syncManager != null) {
+            try {
+                syncManager?.shutdown()
+                logger.info("API sync manager shut down")
+            } catch (e: Exception) {
+                logger.warning("Error shutting down sync manager: ${e.message}")
+            }
+        }
+    }
+
+    private fun shutdownPl3xMap() {
+        try {
+            Pl3xMap.api().worldRegistry.forEach { world ->
+                pl3xMapHook?.unregister(world)
+            }
+            logger.info("Pl3xMap integration shut down")
+        } catch (e: Exception) {
+            logger.warning("Error shutting down Pl3xMap integration: ${e.message}")
+        }
+    }
+
+    private fun saveStorage() {
+        try {
+            storage?.save()
+            logger.info("Storage saved successfully")
+        } catch (e: Exception) {
+            logger.severe("Failed to save storage: ${e.message}")
+            e.printStackTrace()
         }
     }
 }
