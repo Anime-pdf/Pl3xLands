@@ -74,6 +74,7 @@ class Pl3xLandsEditor {
         document.getElementById('world-select').addEventListener('change', (e) => this.switchWorld(e.target.value));
         document.getElementById('new-region-btn').addEventListener('click', () => this.startNewRegion());
         document.getElementById('edit-region-btn').addEventListener('click', () => this.startEditRegion());
+        document.getElementById('save-changes-btn').addEventListener('click', () => this.saveFormChanges());
         document.getElementById('deselect-btn').addEventListener('click', () => this.deselectRegion());
         document.getElementById('save-region-btn').addEventListener('click', () => this.saveRegion());
         document.getElementById('cancel-edit-btn').addEventListener('click', () => this.cancelEdit());
@@ -85,8 +86,20 @@ class Pl3xLandsEditor {
         document.getElementById('tool-fill').addEventListener('click', () => this.setTool('fill'));
         document.getElementById('clear-selection-btn').addEventListener('click', () => this.clearSelection());
 
+        // Form field change detection
+        ['region-name', 'region-description', 'region-owner', 'region-contact', 'region-world'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => this.handleFormChange());
+        });
+
         // Search
         document.getElementById('search-input').addEventListener('input', (e) => this.filterRegions(e.target.value));
+
+        // Form change detection (for editing details without going into edit mode)
+        document.getElementById('region-name').addEventListener('input', () => this.handleFormChange());
+        document.getElementById('region-description').addEventListener('input', () => this.handleFormChange());
+        document.getElementById('region-owner').addEventListener('input', () => this.handleFormChange());
+        document.getElementById('region-contact').addEventListener('input', () => this.handleFormChange());
+        document.getElementById('region-world').addEventListener('change', () => this.handleFormChange());
     }
 
     // ==================== Authentication ====================
@@ -299,17 +312,19 @@ class Pl3xLandsEditor {
         }).addTo(this.map);
 
         // Add cursor coordinate tracking
-        this.map.on('mousemove', (e) => {
-            const coords = document.getElementById('cursor-coords');
-            if (coords) {
-                const x = Math.floor(e.latlng.lng);
-                const z = Math.floor(e.latlng.lat);
-                coords.textContent = `X: ${x}, Z: ${z}`;
-            }
-        });
+        this.map.on('mousemove', () => this.handleCursorCoords());
 
         // Load existing regions
         this.loadExistingRegions();
+    }
+
+    handleCursorCoords() {
+        const coords = document.getElementById('cursor-coords');
+        if (coords) {
+            const x = Math.floor(e.latlng.lng);
+            const z = Math.floor(e.latlng.lat);
+            coords.textContent = `X: ${x}, Z: ${z}`;
+        }
     }
 
     argbToHex(argb) {
@@ -437,13 +452,13 @@ class Pl3xLandsEditor {
         this.selectedRegion = null;
         this.renderRegionList();
 
-        // Hide edit panel
+        // Hide edit panel (don't touch flex property to preserve scrolling)
         document.getElementById('region-edit-panel').classList.add('hidden');
-        document.getElementById('region-list-panel').style.flex = '';
 
         // Reset buttons
         document.getElementById('new-region-btn').classList.remove('hidden');
         document.getElementById('edit-region-btn').classList.add('hidden');
+        document.getElementById('save-changes-btn').classList.add('hidden');
         document.getElementById('deselect-btn').classList.add('hidden');
         document.getElementById('delete-region-btn').classList.add('hidden');
 
@@ -457,16 +472,21 @@ class Pl3xLandsEditor {
 
     showRegionDetails(region) {
         document.getElementById('region-edit-panel').classList.remove('hidden');
-        document.getElementById('region-list-panel').style.flex = '0 0 auto';
+        // Don't override flex on region-list-panel to keep scrolling
 
-        // Populate form
+        // Populate form (leave fields enabled so they can be edited)
         document.getElementById('region-id').value = region.id;
-        document.getElementById('region-id').disabled = true; // Can't change ID
+        document.getElementById('region-id').disabled = true; // Can't change ID (ever)
         document.getElementById('region-name').value = region.name;
+        document.getElementById('region-name').disabled = false;
         document.getElementById('region-description').value = region.description;
+        document.getElementById('region-description').disabled = false;
         document.getElementById('region-owner').value = region.owner;
+        document.getElementById('region-owner').disabled = false;
         document.getElementById('region-contact').value = region.contact;
+        document.getElementById('region-contact').disabled = false;
         document.getElementById('region-world').value = region.world;
+        document.getElementById('region-world').disabled = false;
 
         // Show edit buttons
         document.getElementById('new-region-btn').classList.add('hidden');
@@ -481,6 +501,9 @@ class Pl3xLandsEditor {
 
         // Highlight region on map
         this.highlightRegionChunks(region.chunks);
+
+        // Zoom to region
+        this.zoomToRegion(region.chunks);
     }
 
     // ==================== Edit Mode ====================
@@ -605,7 +628,7 @@ class Pl3xLandsEditor {
 
         // Add rectangle tool handlers
         this.map.on('mousedown', (e) => this.handleRectangleStart(e));
-        this.map.on('mousemove', (e) => this.handleRectangleMove(e));
+        this.map.on('mousemove', (e) => { this.handleRectangleMove(e); this.handleCursorCoords() });
         this.map.on('mouseup', (e) => this.handleRectangleEnd(e));
 
         // Visual feedback layer
@@ -622,6 +645,8 @@ class Pl3xLandsEditor {
         this.map.off('mousedown');
         this.map.off('mousemove');
         this.map.off('mouseup');
+
+        this.map.on('mousemove', () => this.handleCursorCoords());
 
         if (this.chunkLayer) {
             this.map.removeLayer(this.chunkLayer);
@@ -698,7 +723,7 @@ class Pl3xLandsEditor {
         if (!this.editMode || this.currentTool !== 'rectangle') return;
 
         // Prevent map dragging during rectangle selection
-        e.originalEvent.preventDefault();
+        this.map.dragging.disable();
 
         const latlng = e.latlng;
         this.rectangleStart = {
@@ -739,6 +764,9 @@ class Pl3xLandsEditor {
 
     handleRectangleEnd(e) {
         if (!this.editMode || this.currentTool !== 'rectangle' || !this.rectangleStart) return;
+
+        // Re-enable map dragging
+        this.map.dragging.enable();
 
         const latlng = e.latlng;
         const endX = Math.floor(latlng.lng / 16) * 16;
@@ -829,6 +857,8 @@ class Pl3xLandsEditor {
             this.chunkLayer = L.layerGroup().addTo(this.map);
         }
 
+        if (chunks.length === 0) return;
+
         chunks.forEach(packed => {
             const [x, z] = this.unpackChunk(packed);
 
@@ -848,17 +878,98 @@ class Pl3xLandsEditor {
         });
     }
 
+    handleFormChange() {
+        // Show save changes button when form is modified (only if not in edit mode)
+        if (!this.editMode && this.selectedRegion) {
+            document.getElementById('save-changes-btn').classList.remove('hidden');
+        }
+    }
+
+    async saveFormChanges() {
+        if (!this.selectedRegion) return;
+
+        const name = document.getElementById('region-name').value.trim();
+        const description = document.getElementById('region-description').value.trim();
+        const owner = document.getElementById('region-owner').value.trim();
+        const contact = document.getElementById('region-contact').value.trim();
+        const world = document.getElementById('region-world').value;
+
+        if (!name || !owner) {
+            alert('Please fill in all required fields');
+            return;
+        }
+
+        const region = {
+            id: this.selectedRegion.id,
+            name,
+            description,
+            owner,
+            contact,
+            world,
+            chunks: this.selectedRegion.chunks // Keep existing chunks
+        };
+
+        this.showLoading(true);
+
+        try {
+            await this.apiRequest(`/api/editor/regions/${region.id}`, {
+                method: 'PUT',
+                body: JSON.stringify(region, (_, v) => typeof v === 'bigint' ? v.toString() : v)
+            });
+
+            this.setStatus('Region details updated successfully');
+
+            // Update local copy
+            this.selectedRegion.name = name;
+            this.selectedRegion.description = description;
+            this.selectedRegion.owner = owner;
+            this.selectedRegion.contact = contact;
+            this.selectedRegion.world = world;
+
+            await this.loadRegions();
+            await this.loadExistingRegions();
+
+            // Hide save changes button
+            document.getElementById('save-changes-btn').classList.add('hidden');
+
+        } catch (error) {
+            alert(`Failed to save changes: ${error.message}`);
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
+    zoomToRegion(chunks) {
+        if (!chunks || chunks.length === 0) return;
+
+        let minX = Infinity, maxX = -Infinity;
+        let minZ = Infinity, maxZ = -Infinity;
+
+        chunks.forEach(packed => {
+            const [x, z] = this.unpackChunk(packed);
+            minX = Math.min(minX, x);
+            maxX = Math.max(maxX, x + 16);
+            minZ = Math.min(minZ, z);
+            maxZ = Math.max(maxZ, z + 16);
+        });
+
+        const bounds = L.latLngBounds(
+            [minZ, minX],
+            [maxZ, maxX]
+        );
+
+        this.map.fitBounds(bounds, {
+            padding: [50, 50],
+            maxZoom: 3,
+            animate: true,
+            duration: 0.5
+        });
+    }
+
     cancelEdit() {
         this.editMode = false;
         this.selectedChunks.clear();
         this.disableChunkSelection();
-
-        // Reset form to disabled
-        document.getElementById('region-name').disabled = true;
-        document.getElementById('region-description').disabled = true;
-        document.getElementById('region-owner').disabled = true;
-        document.getElementById('region-contact').disabled = true;
-        document.getElementById('region-world').disabled = true;
 
         // Reset tool
         this.setTool('click');
@@ -1013,7 +1124,7 @@ class Pl3xLandsEditor {
     unpackChunk(packed) {
         const packedBig = BigInt(packed);
         const x = Number(packedBig >> 32n);
-        const z = packedBig & 0xFFFFFFFFn;
+        const z = BigInt(packedBig) & 0xFFFFFFFFn;
         const zNorm = Number(z >= 0x80000000n ? z - 0x100000000n : z);
         return [x, zNorm];
     }
