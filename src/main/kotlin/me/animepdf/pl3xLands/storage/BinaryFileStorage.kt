@@ -66,6 +66,7 @@ class BinaryFileStorage(
     override fun load(fresh: Boolean): RegionManifest? {
         if (!file.exists()) {
             logger.info("No existing binary file found at ${file.name}")
+            createEmpty()
             return null
         }
 
@@ -78,7 +79,6 @@ class BinaryFileStorage(
                         val loaded = readBinary(input)
                         logger.info("Loaded ${loaded.regions.size} regions from binary file (${file.length()} bytes)")
 
-                        // Validate regions if enabled
                         if (enableValidation) {
                             validateManifest(loaded)
                         }
@@ -162,6 +162,11 @@ class BinaryFileStorage(
     override fun getAllRegions(): List<Region> {
         if (manifest == null) load()
         return manifest?.regions?.toList() ?: emptyList()
+    }
+
+    private fun createEmpty() {
+        manifest = RegionManifest("invalid", -1, arrayListOf())
+        save(manifest)
     }
 
     private fun writeBinary(out: DataOutputStream, manifest: RegionManifest) {

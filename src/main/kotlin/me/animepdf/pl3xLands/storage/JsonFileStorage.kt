@@ -42,6 +42,7 @@ class JsonFileStorage(
     override fun load(fresh: Boolean): RegionManifest? {
         if (!file.exists()) {
             logger.info("No existing data file found at ${file.name}")
+            createEmpty()
             return null
         }
 
@@ -133,6 +134,11 @@ class JsonFileStorage(
     override fun getAllRegions(): List<Region> {
         if (manifest == null) load()
         return manifest?.regions?.toList() ?: emptyList()
+    }
+
+    private fun createEmpty() {
+        manifest = RegionManifest("invalid", -1, arrayListOf())
+        save(manifest)
     }
 
     private fun validateManifest(manifest: RegionManifest) {
