@@ -312,13 +312,13 @@ class Pl3xLandsEditor {
         }).addTo(this.map);
 
         // Add cursor coordinate tracking
-        this.map.on('mousemove', () => this.handleCursorCoords());
+        this.map.on('mousemove', (e) => this.handleCursorCoords(e));
 
         // Load existing regions
         this.loadExistingRegions();
     }
 
-    handleCursorCoords() {
+    handleCursorCoords(e) {
         const coords = document.getElementById('cursor-coords');
         if (coords) {
             const x = Math.floor(e.latlng.lng);
@@ -628,7 +628,7 @@ class Pl3xLandsEditor {
 
         // Add rectangle tool handlers
         this.map.on('mousedown', (e) => this.handleRectangleStart(e));
-        this.map.on('mousemove', (e) => { this.handleRectangleMove(e); this.handleCursorCoords() });
+        this.map.on('mousemove', (e) => { this.handleRectangleMove(e); this.handleCursorCoords(e) });
         this.map.on('mouseup', (e) => this.handleRectangleEnd(e));
 
         // Visual feedback layer
@@ -646,7 +646,7 @@ class Pl3xLandsEditor {
         this.map.off('mousemove');
         this.map.off('mouseup');
 
-        this.map.on('mousemove', () => this.handleCursorCoords());
+        this.map.on('mousemove', (e) => this.handleCursorCoords(e));
 
         if (this.chunkLayer) {
             this.map.removeLayer(this.chunkLayer);
