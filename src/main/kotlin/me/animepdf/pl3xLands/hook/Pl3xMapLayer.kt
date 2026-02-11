@@ -1,5 +1,6 @@
 package me.animepdf.pl3xLands.hook
 
+import me.animepdf.pl3xLands.config.RenderingConfig
 import net.pl3x.map.core.markers.layer.WorldLayer
 import net.pl3x.map.core.markers.marker.Marker
 import net.pl3x.map.core.world.World
@@ -7,15 +8,16 @@ import net.pl3x.map.core.world.World
 class Pl3xMapLayer(
     world: World,
     val hook: Pl3xMapHook,
-    label: String
+    label: String,
+    renderingConfig: RenderingConfig
 ) : WorldLayer(KEY, world, { label }) {
 
     init {
-        setShowControls(true)
-        setDefaultHidden(false)
-        setUpdateInterval(30)
-        setPriority(10)
-        setZIndex(10)
+        setShowControls(renderingConfig.layerShowControls)
+        setDefaultHidden(renderingConfig.layerDefaultHidden)
+        setUpdateInterval(renderingConfig.layerUpdateInterval)
+        setPriority(renderingConfig.layerPriority)
+        setZIndex(renderingConfig.layerZIndex)
     }
 
     companion object {
@@ -23,6 +25,6 @@ class Pl3xMapLayer(
     }
 
     override fun getMarkers(): Collection<Marker<*>> {
-        return hook.markers.getOrElse(world.name) { ArrayList() }
+        return hook.getMarkersForWorld(world.name)
     }
 }
