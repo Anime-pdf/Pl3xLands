@@ -59,7 +59,7 @@ data class ApiConfig(
 // ==================== STORAGE ====================
 
 enum class StorageType {
-    JSON
+    JSON, BINARY
 }
 
 @ConfigSerializable

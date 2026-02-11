@@ -7,6 +7,7 @@ import me.animepdf.pl3xLands.config.StorageType
 import me.animepdf.pl3xLands.hook.Pl3xMapHook
 import me.animepdf.pl3xLands.http.RegionSyncManager
 import me.animepdf.pl3xLands.http.WebServer
+import me.animepdf.pl3xLands.storage.BinaryFileStorage
 import me.animepdf.pl3xLands.storage.JsonFileStorage
 import me.animepdf.pl3xLands.storage.RegionStorage
 import me.animepdf.pl3xLands.util.ConfigManager
@@ -75,6 +76,14 @@ class Pl3xLandsPlugin : JavaPlugin() {
                     JsonFileStorage(
                         file = File(dataFolder, config.storage.filename),
                         gson = gson,
+                        logger = logger,
+                        enableValidation = config.validation.enabled
+                    )
+                }
+                StorageType.BINARY -> {
+                    logger.info("Using BINARY file storage")
+                    BinaryFileStorage(
+                        file = File(dataFolder, config.storage.filename),
                         logger = logger,
                         enableValidation = config.validation.enabled
                     )
