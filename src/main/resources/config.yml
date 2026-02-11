@@ -1,67 +1,192 @@
+# ==============================================================================
+# Pl3xLands Configuration File
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# API Configuration
+# Settings for retrieving info from external APIs.
+# ------------------------------------------------------------------------------
 api:
+  # Enable or disable the API module completely.
   enable: false
+  
+  # Authentication settings for the API.
   auth:
+    # Enable authentication for API requests.
     enable: false
+    # Authentication method. Valid values: BEARER, BASIC, KEY
     type: BEARER
+    
+    # Settings for BEARER auth type.
     bearer:
       token: thisisverysecrettoken
+
+    # Settings for BASIC auth type.
     basic:
       username: admin
       password: supersecretpassword
+
+    # Settings for KEY auth type.
     key:
       header: X-API-Key
       value: api-key
+
+  # The endpoint URL for the API.
   url: http://localhost:8000
+  
+  # How often (in seconds) to refresh data from the API.
   refresh-interval: 60
+  
+  # Connection timeout in seconds.
   timeout-interval: 30
+  
+  # How many times to retry a failed request.
   retry-attempts: 3
+  
+  # Delay (in seconds) between retry attempts.
   retry-delay: 5
+
+# ------------------------------------------------------------------------------
+# Storage Configuration
+# Controls how land data is saved to the disk.
+# ------------------------------------------------------------------------------
 storage:
+  # Data storage format. 
+  # Valid values: 
+  #   BINARY (Faster, smaller file size)
+  #   JSON   (Human readable, larger file size)
   type: BINARY
+  
+  # The name of the database file.
   filename: lands.bin
+  
+  # Automatically save data at a set interval.
   auto-save: true
+  
+  # Interval in seconds between auto-saves.
   auto-save-interval: 300
+
+# ------------------------------------------------------------------------------
+# Web Editor Configuration
+# Settings for the embedded web server/editor interface.
+# ------------------------------------------------------------------------------
 editor:
+  # Enable the web editor.
   enable: true
+  
+  # Authentication settings for the web editor.
   auth:
     enable: true
+    # Authentication method for the editor. Valid values: BEARER, BASIC
     type: BASIC
+    
+    # Token for BEARER auth.
     bearer:
       token: thisisverysecrettoken
+
+    # Credentials for BASIC auth.
     basic:
       username: admin
       password: supersecretpassword
+
+    # Session timeout in seconds (Default: 3600 = 1 hour).
     session-timeout: 3600
+
+  # Cross-Origin Resource Sharing (CORS) settings.
+  # Useful if hosting the editor on a different domain than the backend.
   cors:
     enabled: true
     allowed-origins:
       - http://localhost:8181
     allow-credentials: true
+
+  # The port the web editor server will listen on.
   port: 8181
+  
+  # The interface IP to bind to (0.0.0.0 binds to all available interfaces).
   bind-address: 0.0.0.0
+  
+  # The public URL where the map is hosted.
   map-url: http://localhost:8080
+  
+  # Request timeout in seconds.
   timeout-interval: 30
+
+# ------------------------------------------------------------------------------
+# Validation Configuration
+# Constraints and limits for regions/claims.
+# ------------------------------------------------------------------------------
 validation:
+  # Enable validation logic.
   enabled: true
+  
+  # Maximum allowed characters for region names.
   max-region-name-length: 64
+  
+  # Maximum allowed characters for descriptions.
   max-description-length: 512
+  
+  # Maximum allowed characters for contact info.
   max-contact-length: 128
+  
+  # Maximum allowed characters for owner names.
   max-owner-length: 64
+  
+  # Maximum amount of chunks a single region can contain.
   max-chunks-per-region: 10000
+  
+  # Minimum amount of chunks required to create a region.
   min-chunks-per-region: 1
+  
+  # List of worlds where claims are allowed. Leave empty [] to allow all worlds.
   allowed-worlds: []
+
+# ------------------------------------------------------------------------------
+# Rendering Configuration
+# Visual settings for how regions appear on the map.
+# ------------------------------------------------------------------------------
 rendering:
+  # How to color the regions.
+  # Valid values: 
+  #   PLAYER_HASH (Generates a color based on the owner's name)
+  #   FIXED_COLOR (Uses the 'fixed-color' setting below for all regions)
   color-scheme: PLAYER_HASH
+  
+  # Hex color code to use if color-scheme is set to FIXED_COLOR.
   fixed-color: '#3388ff'
+  
+  # Width of the region border line (pixels).
   stroke-width: 3
+  
+  # Opacity of the border line (0-255).
   stroke-opacity: 255
+  
+  # Opacity of the region fill color (0-255).
   fill-opacity: 100
+  
+  # Show tooltips when hovering over a region.
   enable-tooltips: true
+  
+  # Show popups when clicking a region.
   enable-popups: true
+  
+  # If true, the tooltip follows the mouse.
   tooltip-sticky: true
+  
+  # The display name of the layer in the map menu.
   layer-name: Lands
+  
+  # How often (in seconds) to redraw the layer.
   layer-update-interval: 30
+  
+  # Order in the layer list (Lower numbers are higher up).
   layer-priority: 10
+  
+  # Z-Index determines stacking order (Higher numbers overlap lower numbers).
   layer-z-index: 10
+  
+  # If true, the layer is hidden by default when the map loads.
   layer-default-hidden: false
+  
+  # Show the layer in the map controls menu.
   layer-show-controls: true
