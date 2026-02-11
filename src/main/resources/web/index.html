@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pl3xLands Editor</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!-- Auth Modal -->
+<div id="auth-modal" class="modal">
+    <div class="modal-content">
+        <h2>Authentication Required</h2>
+        <div id="auth-form">
+            <div class="form-group">
+                <label for="auth-type">Auth Type:</label>
+                <select id="auth-type">
+                    <option value="password">Password</option>
+                    <option value="token">Token</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="password-group">
+                <label for="username-input">Username:</label>
+                <input type="text" id="username-input" placeholder="Enter username">
+                <label for="password-input">Password:</label>
+                <input type="password" id="password-input" placeholder="Enter password">
+            </div>
+
+            <div class="form-group hidden" id="token-group">
+                <label for="token-input">Token:</label>
+                <input type="text" id="token-input" placeholder="Enter token">
+            </div>
+
+            <div class="form-actions">
+                <button id="login-btn" class="btn btn-primary">Login</button>
+            </div>
+
+            <div id="auth-error" class="error-message hidden"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Editor -->
+<div id="app" class="hidden">
+    <!-- Toolbar -->
+    <div id="toolbar">
+        <div class="toolbar-section">
+            <h1>🗺️ Pl3xLands Editor</h1>
+        </div>
+
+        <div class="toolbar-section">
+            <label for="world-select">World:</label>
+            <select id="world-select"></select>
+        </div>
+
+        <div class="toolbar-section">
+            <button id="new-region-btn" class="btn btn-primary">
+                ➕ New Region
+            </button>
+            <button id="edit-region-btn" class="btn btn-primary hidden">
+                ✏️ Edit Region
+            </button>
+            <button id="deselect-btn" class="btn btn-secondary hidden">
+                ↩️ Deselect
+            </button>
+            <button id="save-region-btn" class="btn btn-success hidden">
+                💾 Save Region
+            </button>
+            <button id="cancel-edit-btn" class="btn btn-secondary hidden">
+                ❌ Cancel
+            </button>
+            <button id="delete-region-btn" class="btn btn-danger hidden">
+                🗑️ Delete
+            </button>
+        </div>
+
+        <!-- Selection Tools (shown in edit mode) -->
+        <div class="toolbar-section" id="selection-tools" class="hidden">
+            <div class="tool-group">
+                <button id="tool-click" class="btn btn-tool active" title="Click to select/deselect chunks">
+                    🖱️
+                </button>
+                <button id="tool-rectangle" class="btn btn-tool" title="Draw rectangle to select chunks">
+                    ▭
+                </button>
+                <button id="tool-fill" class="btn btn-tool" title="Fill enclosed area">
+                    🪣
+                </button>
+            </div>
+            <div class="tool-divider"></div>
+            <button id="clear-selection-btn" class="btn btn-secondary" title="Clear all selected chunks">
+                🗑️ Clear
+            </button>
+        </div>
+
+        <div class="toolbar-section">
+            <span id="cursor-coords" class="toolbar-info">X: 0, Z: 0</span>
+        </div>
+
+        <div class="toolbar-section">
+            <span id="session-timer" class="toolbar-info">Session: --:--</span>
+        </div>
+
+        <div class="toolbar-section">
+            <button id="logout-btn" class="btn btn-secondary">Logout</button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="main-content">
+        <!-- Map -->
+        <div id="map-container">
+            <div id="map"></div>
+            <div id="edit-instructions" class="hidden">
+                <p>🖱️ Click chunks to select/deselect</p>
+                <p>Selected chunks: <span id="chunk-count">0</span></p>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div id="sidebar">
+            <div id="region-list-panel">
+                <h3>Regions</h3>
+                <div id="region-search">
+                    <input type="text" id="search-input" placeholder="Search regions...">
+                </div>
+                <div id="region-list"></div>
+            </div>
+
+            <div id="region-edit-panel" class="hidden">
+                <h3>Region Details</h3>
+                <form id="region-form">
+                    <div class="form-group">
+                        <label for="region-id">ID:</label>
+                        <input type="text" id="region-id" required
+                               pattern="[a-zA-Z0-9_-]+"
+                               title="Only letters, numbers, hyphens, and underscores">
+                        <small>Only letters, numbers, hyphens, underscores</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="region-name">Name:</label>
+                        <input type="text" id="region-name" required maxlength="64">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="region-description">Description:</label>
+                        <textarea id="region-description" maxlength="512" rows="3"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="region-owner">Owner:</label>
+                        <input type="text" id="region-owner" required maxlength="64">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="region-contact">Contact:</label>
+                        <input type="text" id="region-contact" maxlength="128">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="region-world">World:</label>
+                        <select id="region-world" required></select>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div id="status-bar">
+        <span id="status-message">Ready</span>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="hidden">
+    <div class="spinner"></div>
+    <p>Loading...</p>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Main Script -->
+<script src="script.js"></script>
+</body>
+</html>
