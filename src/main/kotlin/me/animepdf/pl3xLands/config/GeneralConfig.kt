@@ -15,13 +15,13 @@ data class GeneralConfig(
 
 @ConfigSerializable
 data class AuthBearerConfig(
-    val token: String = "api-token"
+    val token: String = "thisisverysecrettoken"
 )
 
 @ConfigSerializable
 data class AuthBasicConfig(
-    val username: String = "user",
-    val password: String = "pass"
+    val username: String = "admin",
+    val password: String = "supersecretpassword"
 )
 
 @ConfigSerializable
@@ -47,7 +47,7 @@ data class ApiAuthConfig(
 
 @ConfigSerializable
 data class ApiConfig(
-    val enable: Boolean = true,
+    val enable: Boolean = false,
     val auth: ApiAuthConfig = ApiAuthConfig(),
     val url: String = "http://localhost:8000",
     val refreshInterval: Long = 60,
@@ -64,8 +64,8 @@ enum class StorageType {
 
 @ConfigSerializable
 data class StorageConfig(
-    val type: StorageType = StorageType.JSON,
-    val filename: String = "lands.json",
+    val type: StorageType = StorageType.BINARY,
+    val filename: String = "lands.bin",
     val autoSave: Boolean = true,
     val autoSaveInterval: Long = 300
 )
@@ -85,7 +85,7 @@ enum class EditorAuthType {
 
 @ConfigSerializable
 data class EditorAuthConfig(
-    val enable: Boolean = false,
+    val enable: Boolean = true,
     val type: EditorAuthType = EditorAuthType.BASIC,
     val bearer: AuthBearerConfig = AuthBearerConfig(),
     val basic: AuthBasicConfig = AuthBasicConfig(),
