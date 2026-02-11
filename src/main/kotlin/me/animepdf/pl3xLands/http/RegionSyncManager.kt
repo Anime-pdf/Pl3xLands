@@ -13,12 +13,14 @@ import java.net.http.HttpResponse
 import java.time.Duration
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.logging.Logger
 import kotlin.io.encoding.Base64
 
 class RegionSyncManager(
     private val apiConfig: ApiConfig,
     private val storage: RegionStorage,
-    private val pl3xMapHook: Pl3xMapHook
+    private val pl3xMapHook: Pl3xMapHook,
+    private val logger: Logger
 ) {
     private val client = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(apiConfig.timeoutInterval))
@@ -32,7 +34,7 @@ class RegionSyncManager(
             try {
                 sync()
             } catch (e: Exception) {
-                println("Sync failed: ${e.message}")
+                logger.warning("Sync failed: ${e.message}")
                 e.printStackTrace()
             }
         }, 0, apiConfig.refreshInterval, TimeUnit.SECONDS)
@@ -43,7 +45,7 @@ class RegionSyncManager(
     }
 
     private fun sync() {
-        println("Starting Sync...")
+        logger.info("Starting Sync...")
 
         val localManifest = storage.load()
         val localHash = localManifest?.hash ?: ""
@@ -81,11 +83,11 @@ class RegionSyncManager(
         val remoteHash = remoteStatus["hash"] as String
 
         if (localHash == remoteHash) {
-            println("Local data is up to date. Skipping download.")
+            logger.info("Local data is up to date. Skipping download.")
             return
         }
 
-        println("Update detected (Local: $localHash != Remote: $remoteHash). Downloading...")
+        logger.info("Update detected (Local: $localHash != Remote: $remoteHash). Downloading...")
 
         val dataRequest = HttpRequest.newBuilder()
             .uri(URI.create("${apiConfig.url}/regions"))
@@ -98,11 +100,11 @@ class RegionSyncManager(
         if (dataResponse.statusCode() == 200) {
             val newManifest = gson.fromJson(dataResponse.body(), RegionManifest::class.java)
             storage.save(newManifest)
-            println("Regions updated successfully. Loaded ${newManifest.regions.size} regions.")
+            logger.info("Regions updated successfully. Loaded ${newManifest.regions.size} regions.")
 
             pl3xMapHook.updateMap()
         } else {
-            println("Failed to download data: HTTP ${dataResponse.statusCode()}")
+            logger.warning("Failed to download data: HTTP ${dataResponse.statusCode()}")
         }
     }
 }
