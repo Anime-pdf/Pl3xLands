@@ -135,6 +135,7 @@ data class RenderingConfig(
     val enableTooltips: Boolean = true,
     val enablePopups: Boolean = true,
     val tooltipSticky: Boolean = true,
+    val layerName: String = "Lands",
     val layerUpdateInterval: Int = 30,
     val layerPriority: Int = 10,
     val layerZIndex: Int = 10,

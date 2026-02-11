@@ -8,9 +8,8 @@ import net.pl3x.map.core.world.World
 class Pl3xMapLayer(
     world: World,
     val hook: Pl3xMapHook,
-    label: String,
     renderingConfig: RenderingConfig
-) : WorldLayer(KEY, world, { label }) {
+) : WorldLayer(KEY, world, { renderingConfig.layerName }) {
 
     init {
         setShowControls(renderingConfig.layerShowControls)

@@ -42,7 +42,7 @@ class Pl3xMapHook(
     }
 
     fun register(world: World) {
-        world.layerRegistry.register(Pl3xMapLayer(world, this, "lands", renderingConfig))
+        world.layerRegistry.register(Pl3xMapLayer(world, this, renderingConfig))
     }
 
     fun unregister(world: World) {
