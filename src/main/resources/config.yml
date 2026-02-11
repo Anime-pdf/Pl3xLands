@@ -1,0 +1,67 @@
+api:
+  enable: false
+  auth:
+    enable: false
+    type: BEARER
+    bearer:
+      token: thisisverysecrettoken
+    basic:
+      username: admin
+      password: supersecretpassword
+    key:
+      header: X-API-Key
+      value: api-key
+  url: http://localhost:8000
+  refresh-interval: 60
+  timeout-interval: 30
+  retry-attempts: 3
+  retry-delay: 5
+storage:
+  type: BINARY
+  filename: lands.bin
+  auto-save: true
+  auto-save-interval: 300
+editor:
+  enable: true
+  auth:
+    enable: true
+    type: BASIC
+    bearer:
+      token: thisisverysecrettoken
+    basic:
+      username: admin
+      password: supersecretpassword
+    session-timeout: 3600
+  cors:
+    enabled: true
+    allowed-origins:
+      - http://localhost:8181
+    allow-credentials: true
+  port: 8181
+  bind-address: 0.0.0.0
+  map-url: http://localhost:8080
+  timeout-interval: 30
+validation:
+  enabled: true
+  max-region-name-length: 64
+  max-description-length: 512
+  max-contact-length: 128
+  max-owner-length: 64
+  max-chunks-per-region: 10000
+  min-chunks-per-region: 1
+  allowed-worlds: []
+rendering:
+  color-scheme: PLAYER_HASH
+  fixed-color: '#3388ff'
+  stroke-width: 3
+  stroke-opacity: 255
+  fill-opacity: 100
+  enable-tooltips: true
+  enable-popups: true
+  tooltip-sticky: true
+  layer-name: Lands
+  layer-update-interval: 30
+  layer-priority: 10
+  layer-z-index: 10
+  layer-default-hidden: false
+  layer-show-controls: true
