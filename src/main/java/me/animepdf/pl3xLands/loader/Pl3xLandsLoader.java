@@ -19,6 +19,7 @@ public class Pl3xLandsLoader implements PluginLoader {
                 ).build()
         );
         resolver.addDependency(new Dependency(new DefaultArtifact("org.jetbrains.kotlin:kotlin-stdlib:2.3.0"), null));
+        resolver.addDependency(new Dependency(new DefaultArtifact("org.spongepowered:configurate-hocon:4.2.0"), null));
         resolver.addDependency(new Dependency(new DefaultArtifact("org.spongepowered:configurate-extra-kotlin:4.2.0"), null));
 
         classpathBuilder.addLibrary(resolver);

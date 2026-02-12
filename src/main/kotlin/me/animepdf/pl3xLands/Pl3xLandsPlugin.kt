@@ -59,7 +59,7 @@ class Pl3xLandsPlugin : JavaPlugin() {
 
     private fun loadConfig() {
         try {
-            config = ConfigManager.load(dataFolder.toPath(), "config.yaml")
+            config = ConfigManager.load(dataFolder.toPath(), "config.conf")
             RegionValidator.setConstraints(config.validation)
             logger.info("Config loaded successfully")
         } catch (e: Exception) {

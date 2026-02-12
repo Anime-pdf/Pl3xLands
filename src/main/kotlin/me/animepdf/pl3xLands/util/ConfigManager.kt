@@ -1,7 +1,6 @@
 package me.animepdf.pl3xLands.util
 
-import org.spongepowered.configurate.yaml.NodeStyle
-import org.spongepowered.configurate.yaml.YamlConfigurationLoader
+import org.spongepowered.configurate.hocon.HoconConfigurationLoader
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.notExists
@@ -17,10 +16,16 @@ object ConfigManager {
         }
         val file = folder.resolve(filename)
 
-        val loader = YamlConfigurationLoader.builder()
+        val loader = HoconConfigurationLoader.builder()
             .path(file)
-            .nodeStyle(NodeStyle.BLOCK)
             .indent(2)
+            .defaultOptions { opts ->
+                opts.header(
+                    "==============================================================================\n" +
+                    " Pl3xLands Configuration File\n" +
+                    "=============================================================================="
+                )
+            }
             .build()
 
         val node = loader.load()

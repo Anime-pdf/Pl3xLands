@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     kotlin("jvm") version "2.3.0"
     id("com.gradleup.shadow") version "8.3.0"
@@ -29,7 +31,7 @@ dependencies {
     compileOnly("org.xerial:sqlite-jdbc:3.49.1.0") // in paper
 
     // Configurate
-    compileOnly("org.spongepowered:configurate-yaml:4.2.0") // in paper
+    compileOnly("org.spongepowered:configurate-hocon:4.2.0") // downloaded by paper
     compileOnly("org.spongepowered:configurate-extra-kotlin:4.2.0") // downloaded by paper
 }
 
@@ -70,4 +72,9 @@ tasks {
             expand(props)
         }
     }
+}
+
+val compileKotlin: KotlinCompile by tasks
+compileKotlin.compilerOptions {
+    freeCompilerArgs.set(listOf("-Xannotation-default-target=param-property"))
 }
